@@ -21,7 +21,7 @@ In this analysis the Vegas betting lines are treated as a sort of implied predic
 
 
 
-## Data Acquisition
+## Data Wrangling
 
 ### FiveThirtyEight Predictions
 
@@ -34,3 +34,9 @@ With this combination of tools, I was able to acquire the predictions data for e
 ### NFL Game Results
 
 Past NFL game results are available on numerous websites, often already in well organized tables. While there are sites and services to acquire (for fee) machine-readable results and/or query an API for specific results, I found it most convenient and cost-effective to simply cut and paste from a table rendered on a website. I used the site [www.scoreboard.com](http://www.scoreboard.com/nfl/) and pasted its results into Excel where I was able to massage into a clean, machine-readable format (see NFL_game_results_2015_2016.csv).
+
+### Historical Betting Lines
+
+While the FiveThirtyEight predictions might have been the most difficult data set to acquire from a technical standpoint, the historical betting lines were the most difficult to locate. 
+
+As it turns out, there is no single official betting line per NFL game. Each sportsbook 
