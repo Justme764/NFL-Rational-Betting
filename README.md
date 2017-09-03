@@ -29,4 +29,8 @@ While the FiveThirtyEight NFL Predictions are freely available on the web, there
 
 The web scraping challenge is complicated by the fact that the [FiveThirtyEight NFL Predictions page](http://projects.fivethirtyeight.com/2016-nfl-predictions/) is an _interactive_ web page where the user must click to select a particular week of the season before the table of predictions for that week is displayed. Accordingly, a straightforward R-based scraping using say the 'readHTMLTable' command within the [XML package](https://cran.r-project.org/web/packages/XML/index.html) is not possible. In this project I have relied on the [RSelenium package](https://cran.r-project.org/web/packages/RSelenium/index.html) with dependencies on the [Java Development Kit](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html), [Selenium WebDriver](http://docs.seleniumhq.org/projects/webdriver/), and [ChromeDriver](https://sites.google.com/a/chromium.org/chromedriver/) extension (particularly for use with the Google Chrome browser).
 
-With this combination of tools, I was able to acquire the predictions data for each week in the 2015 and 2016 (to date) seasons.      
+With this combination of tools, I was able to acquire the predictions data for each week in the 2015 and 2016 seasons. 
+
+### NFL Game Results
+
+Past NFL game results are available on numerous websites, often already in well organized tables. While there are sites and services to acquire (for fee) machine-readable results and/or query an API for specific results, I found it most convenient and cost-effective to simply cut and paste from a table rendered on a website. I used the site [www.scoreboard.com](http://www.scoreboard.com/nfl/) and pasted its results into Excel where I was able to massage into a clean, machine-readable format (see NFL_game_results_2015_2016.csv).
