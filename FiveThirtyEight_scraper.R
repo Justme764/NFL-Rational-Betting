@@ -1,4 +1,5 @@
-## Script to scrape NFL game score predictions by FiveThirtyEight and organize in a sensible table
+## Script to scrape NFL game score predictions by FiveThirtyEight and organize in a sensible data 
+## frame
 
 # Before getting started, need to start a new Selenium Server
 # In command window, revert to root directory and then issue the following commands:
@@ -8,106 +9,112 @@
 # Separarately, double-click the chromedriver executable at /Users/amulliken/Documents/WebDriver
 # (Also has dependency to install most recent JDE)
 
-
+# Libraries
 library("rvest")
 library("XML")
 library("RSelenium")
 
+# Working Directory
+workingDir <- "/Users/amulliken/Google Drive/R/NFL-Rational-Betting"
+setwd(workingDir)
 
+# Input - Required URLs
 FiveThirtyEight2015_url <- "http://projects.fivethirtyeight.com/2015-nfl-predictions/"
+FiveThirtyEight2016_url <- "http://projects.fivethirtyeight.com/2016-nfl-predictions/"
 
 # Open a remote connection and navigate to the Five Thirty Eight NFL predictions page
 remDr <- remoteDriver(browserName = "chrome")
 remDr$open()
-remDr$navigate(FiveThirtyEight2015_url)
+remDr$navigate(FiveThirtyEight2016_url) # change between *2015_url and *2016_url, as well as 
+                                        # season number at line 98
 # For troubleshooting, try remDr$getStatus()
 
-# This will click on Week 5: !!!!
-weekSelectorElement <- remDr$findElement(using = 'css selector', ".week:nth-child(5) .circle")
-weekSelectorElement$clickElement()
 
 
-# Want to loop through each of the weeks (using Rselenium commands to click), and download the table
-# Use remDr$close to close the connection
+## LOOP THROUGH WEEK PAGES AND EXTRACT DATA FROM HTML
 
-## READ IN RELEVANT DATA FROM HTML
-# Note: CSS codes for targeting page text learned from application of SelectorGadget
+master_df <- data.frame()
+for(j in 1:17){
 
-# test <- htmlParse(FiveThirtyEight2015_url)
-# tables <- readHTMLTable(test)
-# Five38_predictions <- as.data.frame(tables[2])
+  # for some reason this isnt working
+  week_idx <- as.integer(j)
+  
+  # Select the week you are interested in by issuing Rselenium commands to virtually click
+  findElementString <- paste(".week:nth-child(",toString(week_idx),") .circle",sep="")
+  weekSelectorElement <- remDr$findElement(using = 'css selector', findElementString)
+  weekSelectorElement$clickElement()
+  
+  # Get all of the page data
+  page_data <- htmlParse(remDr$getPageSource()[[1]])
+  table_data_raw <- readHTMLTable(page_data, stringsAsFactors=FALSE)
+  table_data <- table_data_raw[[2]]
+  
+  # Save the data we need
+  awayteam_name <- table_data$V2
+  hometeam_name <- table_data$V5
+  
+  # initialize vectors with 538 predictions
+  awayteam_winPct <- numeric(nrow(table_data))
+  awayteam_line <- numeric(nrow(table_data))
+  hometeam_winPct <- numeric(nrow(table_data))
+  hometeam_line <- numeric(nrow(table_data))
+  
+  for(i in 1:nrow(table_data)){
+    
+    rawAwayString <- table_data$V3[i]
+    testSplit <- unlist(strsplit(rawAwayString,"\n"))
+    if(length(testSplit)>1){
+      testSplit[2] <- trimws(testSplit[2],which="both")
+      awayteam_winPct[i]<-as.numeric(gsub("%","",testSplit[1]))
+      if(testSplit[2]!="PK"){
+        awayteam_line[i]<-as.numeric(testSplit[2])
+      }
+      # else we want to leave as 0 - a pick em line
+      hometeam_line[i]<-(-1*awayteam_line[i])
+    }else{
+      awayteam_winPct[i]<-as.numeric(gsub("%","",testSplit))
+    }
+    
+    rm(testSplit)
+    
+    rawHomeString <- table_data$V4[i]
+    testSplit <- unlist(strsplit(rawHomeString,"\n"))
+    if(length(testSplit)>1){
+      testSplit[2] <- trimws(testSplit[2],which="both")
+      hometeam_winPct[i]<-as.numeric(gsub("%","",testSplit[1]))
+      if(testSplit[2]!="PK"){
+        hometeam_line[i]<-as.numeric(testSplit[2])
+      }
+      # else we want to leave as 0 - a pick em line
+      awayteam_line[i]<-(-1*hometeam_line[i])
+    }else{
+      hometeam_winPct[i]<-as.numeric(gsub("%","",testSplit))
+    }
+    
+  }
+  
+  
+  # Create season, week, and week-game vectors to include in data frame
+  season <- rep(2016,times=nrow(table_data))
+  week <- rep(week_idx,times=nrow(table_data))
+  week_game <- seq(from=1,to=nrow((table_data)),by=1)
+  
+  week_df <- data.frame(season,week,week_game,awayteam_name,awayteam_winPct,awayteam_line,
+                        hometeam_name,hometeam_winPct,hometeam_line)
+  
+  # Combine into one master data frame
+  if(week_idx==1){
+    master_df<-week_df
+  } else {
+    master_df<-rbind(master_df,week_df)
+  }
+
+} # loop over all weeks
+
+# Save data frame into .Rdata and .csv 
+saveRDS(master_df, "FiveThirtyEight_predictions.Rdata")
+write.csv(master_df, file="FiveThirtyEight_predictions.csv",row.names=FALSE)
+
+remDr$close
 
 
-# page_data <- read_html(FiveThirtyEight2015_url)
-# 
-# away_teams <- html_text(html_nodes(page_data, ".team .away"))
-# away_teams_prob <- html_text(html_nodes(page_data, "div.prob.away"))
-# 
-# home_teams <- html_text(html_nodes(page_data, ".team .home"))
-# home_teams_prob <- html_text(html_nodes(page_data, "div.prob.home"))
-
-
-## USE RSELENIUM TO "CLICK" TO THE NEXT WEEK'S DATA
-
-# RSelenium::startServer()
-# remDr <- remoteDriver(remoteServerAddr = "localhost", 
-#                       version = "",
-#                       browserName = "chrome",
-#                       platform = "MAC")
-# remDr$open()
-# remDr$navigate(FiveThirtyEight2015_url)
-# 
-# webElems <- remDr$findElements(using = 'css selector', ".week:nth-child(5) .circle")
-# webElem$clickElement()
-# 
-
-
-
-
-# good_nodes <- html_nodes(lego_movie, ".prob")
-# 
-# test <- html_nodes(lego_move, ".team .away")
-
-
-
-# FiveThirtyEight2015 <- read_html(FiveThirtyEight2015_url)
-# 
-# test <- htmlParse(FiveThirtyEight2015_url)
-# 
-# 
-# win_probs <- xpathApply(test,"//div[@class='prob']", xmlValue)
-# elo_spread <- xpathApply(test,"//div[@class='spread home fav']", xmlValue)
-# 
-# teamnames <- xpathApply(test,"//td[@data-team]", xmlValue)
-
-
-# <td data-team="SD" class="team home"><div class="winner">SD</div></td>
-#   <td class="live"><div class="not-live"> </div></td>
-#   </tr>
-#   <tr>
-#   <td class="day"></td>
-#   <td data-team="NO" class="team away"><div class="loser">NO</div></td>
-#   <td class="pct">
-#   <div style="background-color:#aadaf1" class="prob">33%</div>
-#   <div class="spread"> </div>
-#   </td>
-#   <td class="pct">
-#   <div style="background-color:#56b5e3" class="prob">66%</div>
-#   <div class="spread home fav">-5</div>
-#   </td>
-#   
-#   <td data-team="ARI" class="team home"><div class="winner">ARI</div></td>
-#   <td class="live"><div class="not-live"> </div></td>
-#   </tr>
-#   <tr>
-#   <td class="day"></td>
-#   <td data-team="BAL" class="team away"><div class="loser">BAL</div></td>
-#   <td class="pct">
-#   <div style="background-color:#9ed4ef" class="prob">38%</div>
-#   <div class="spread"> </div>
-#   </td>
-# 
-# id_or_class_xp <- "//p[@id='txt2']//text() | //div[@class='mystuff']//text()"
-# xpathSApply( doc,id_or_class_xp,xmlValue)
-# 
-# [1] "Latine dictum" "\n    "        "sit altum"     "\n    "        "videtur"       "\n" 
